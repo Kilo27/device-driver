@@ -1,1 +1,0 @@
-savedcmd_leap.ko := ld -r -EL  -maarch64elf -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T /usr/src/linux-headers-6.18.7-76061807-generic/scripts/module.lds -o leap.ko leap.o leap.mod.o .module-common.o
