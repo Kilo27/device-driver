@@ -1,43 +1,33 @@
 #include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/usb.h>
-#include <linux/hid.h>
+#include <linux/init.h>
+#include <linux/fs.h>
+static int major;
 
-static int leap_probe(struct usb_interface *interface, const struct usb_device_id *id);
-static void leap_disconnect(struct usb_interface *interface);
-
-
-static int leap_probe(struct usb_interface *interface, const struct usb_device_id *id) {
-    printk(KERN_INFO "Leap Motion device plugged in\n");
-    // Add your initialization code here
+static ssize_t my_read(struct file *f, char __user *u , size_t l, loff_t *o){
+    printk("Read is called\n");
     return 0;
 }
 
-static void leap_disconnect(struct usb_interface *interface) {
-    printk(KERN_INFO "Leap Motion device removed\n");
-    // Add your cleanup code here
-}
-
-
-
-static struct usb_device_id leap_table[] = {
-    { USB_DEVICE(0x294B, 0x0001) }, // Leap Motion Vendor/Product ID
-    {}
-};
-
-static struct usb_driver leap_driver = {
-    .name = "leap_motion",
-    .probe = leap_probe,
-    .disconnect = leap_disconnect,
-    .id_table = leap_table,
+static struct file_operations fops = {
+    .read = my_read
 };
 
 static int __init leap_init(void) {
-    return usb_register(&leap_driver);
+
+    major = register_chrdev(0,"leap", &fops);
+
+    if (major<0){
+        printk("Error in registering leap motion device\n");
+        return major;
+    }
+    printk("The device has been registered. The Major Device Number is %d\n", major);
+    return 0;
 }
 
 static void __exit leap_exit(void) {
-    usb_deregister(&leap_driver);
+    unregister_chrdev(major, "leap");
+    printk("The leap device has been deregistered\n");
+    
 }
 
 
@@ -45,5 +35,5 @@ module_init(leap_init);
 module_exit(leap_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Authors");
+MODULE_AUTHOR("Team-12");
 MODULE_DESCRIPTION("Leap Motion Driver");
