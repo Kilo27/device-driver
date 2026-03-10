@@ -10,7 +10,7 @@ static ssize_t my_read(struct file *filep, char __user *buf , size_t len, loff_t
         printk("Failed to copy data to user space\n");
         return -EFAULT;
     }
-    printk(KERB_INFO "Data read done\n");
+    printk(KERN_INFO "Data read done\n");
     return mem_size;
     
 }
@@ -19,7 +19,7 @@ static ssize_t my_write(struct file *filep, const char __user *user_buf, size_t 
    
     if (copy_from_user(kernel_buffer,buf,len)){
         printk("Failed to copy data to userspace\n");
-        return -EFAULT;_
+        return -EFAULT;
     }
 
     printk(KERN_INFO "Write Function\n");
@@ -28,7 +28,7 @@ static ssize_t my_write(struct file *filep, const char __user *user_buf, size_t 
 }
 
 static struct file_operations fops = {
-    .read = my_read
+    .read = my_read,
     .write = my_write
 };
 
