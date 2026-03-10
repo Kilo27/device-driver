@@ -3,34 +3,33 @@
 #include <linux/fs.h>
 static int major;
 
-static ssize_t my_read(struct file *f, char __user *u , size_t l, loff_t *o){
-    printk("Read is called\n");
-    return 0;
+static ssize_t my_read(struct file *filep, char __user *buf , size_t len, loff_t *off){
+    //printk("Read is called\n");
+
+     if(copy_to_user(buf,kernel_buffer, mem_size)){
+        printk("Failed to copy data to user space\n");
+        return -EFAULT;
+    }
+    printk(KERB_INFO "Data read done\n");
+    return mem_size;
+    
 }
 
 static ssize_t my_write(struct file *filep, const char __user *user_buf, size_t len, loff_t *off){
-    int not_copied, delta, to_copy = (len + *off) < sizeof(text) ? len : (sizeof(text) - *off);
-
-    pr_info("write is called, we want to add %ld bytes, but actually only copying %d bytes. The offset is %lld\n", len, to_copy, *off);
-
-    if(*off >= sizeof(text)){
-        return 0;
+   
+    if (copy_from_user(kernel_buffer,buf,len)){
+        printk("Failed to copy data to userspace\n");
+        return -EFAULT;_
     }
 
-    not_copied = copy_from_user(&text[*off], user_buf, to_copy);
-    delta = to_copy - not_copied;
-
-    if(not_copied){
-        pr_warn("leap.c - Could only copy %d bytes\n",delta);
-
-        *off += delta;
-        return delta;
-    }
+    printk(KERN_INFO "Write Function\n");
+    return len;
 
 }
 
 static struct file_operations fops = {
     .read = my_read
+    .write = my_write
 };
 
 static int __init leap_init(void) {
