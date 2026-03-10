@@ -3,8 +3,10 @@ Steps to build and run:
   2. make install
   3. sudo insmod build/leap.ko
   4. sudo rmmod build/leap.ko - To unload kernel module after using
-  5. Shout out Fergus, Shoutout Lidl, Shoutout Github
-  6. 7
-  7. Harry loves Ennis
-  8. Daniel loves his barber
-  9. Kyle loves Oisin
+
+Steps to utilise
+  1. insert to usb port
+  2. place leap sensor upright on stable surface
+  3. call leap in terminal
+  4. utilise the UI to control pc volume, brightness etc
+  5. exit from UI and unplug
