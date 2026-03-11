@@ -1,9 +1,12 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/fs.h>
+#include <linux/usb.h>
 #define VENDOR_ID 0xf182
 #define PRODUCT_ID 0x0003
 static int major;
+
+static struct usb_driver leap_usb_driver;
 
 static struct usb_device_id usb_table[] = {{ USB_DEVICE(VENDOR_ID, PRODUCT_ID) }, {}};
 MODULE_DEVICE_TABLE(usb, usb_table);
@@ -13,7 +16,7 @@ static void leap_disconnect(struct usb_interface* intf)
     printk("The leap device has been disconnected\n");
 }
 
-static int leap_probe(struct usb_interface* usb_intf, struct usb_device_id* usb_dID)
+static int leap_probe(struct usb_interface* usb_intf, const struct usb_device_id* usb_dID)
 {
     struct usb_device* usb_parent = interface_to_usbdev(usb_intf);
     struct usb_interface* current_intf;
@@ -41,8 +44,8 @@ static struct usb_driver leap_usb_driver =
 {
     .name = "leap",
     .id_table = usb_table,
-    .probe = leap_probe,
     .disconnect = leap_disconnect,
+    .probe = leap_probe,
 };
 
 static ssize_t my_read(struct file *f, char __user *u , size_t l, loff_t *o){
