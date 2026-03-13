@@ -18,6 +18,8 @@ static void leap_disconnect(struct usb_interface* intf)
 
 static int leap_probe(struct usb_interface* usb_intf, const struct usb_device_id* usb_dID)
 {
+    printk("Probing leap device");
+
     struct usb_device* usb_parent = interface_to_usbdev(usb_intf);
     struct usb_interface* current_intf;
 
@@ -31,7 +33,7 @@ static int leap_probe(struct usb_interface* usb_intf, const struct usb_device_id
 
 	    if (old_driver && old_driver != &leap_usb_driver)
 	    {
-	        printk("Previous driver unbinded");
+	        printk("Previous driver unbinded\n");
 	        usb_driver_release_interface(old_driver, current_intf);
 	    }
         }
@@ -57,19 +59,28 @@ static struct file_operations fops = {
     .read = my_read
 };
 
-static int __init leap_init(void) {
-
+static int __init leap_init(void) 
+{
+    int ret = usb_register(&leap_usb_driver);
     major = register_chrdev(0,"leap", &fops);
 
+    if (ret)
+    {
+	printk("Error in registering leap motion device : usb\n");
+	return ret;
+    }
+
     if (major<0){
-        printk("Error in registering leap motion device\n");
+        printk("Error in registering leap motion device : file\n");
         return major;
     }
+
     printk("The device has been registered. The Major Device Number is %d\n", major);
     return 0;
 }
 
 static void __exit leap_exit(void) {
+    usb_deregister(&leap_usb_driver);
     unregister_chrdev(major, "leap");
     printk("The leap device has been deregistered\n");
     
