@@ -1,51 +1,85 @@
 #include <linux/module.h>
+#include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/fs.h>
+#include <linux/slab.h>
+#include <linux/errno.h>
+#include <linux/mutex.h>
+#include <linux/spinlock.h>
+#include <linux/kfifo.h>
+#include <linux/poll.h>
+#include <linux/uaccess.h>
 #include <linux/usb.h>
-#define VENDOR_ID 0xf182
-#define PRODUCT_ID 0x0003
-static int major;
+#include <linux/cdev.h>
+#include <linux/device.h>
+
+#define DRIVER_NAME "leap_motion"
+#define LEAP_VENDOR_ID 0x294B
+#define LEAP_PRODUCT_ID 0x0001
+
+#define LEAP_FIFO_FRAMES   8
 
 static struct usb_driver leap_usb_driver;
 
-static struct usb_device_id usb_table[] = {{ USB_DEVICE(VENDOR_ID, PRODUCT_ID) }, {}};
-MODULE_DEVICE_TABLE(usb, usb_table);
+struct leap_dev {
+  //Found this online, seems to be standard for linux usb devices using the interface_to_usbdev function - KJ
+  struct usb_device   *udev;
+  struct usb_interface *intf;
 
-static void leap_disconnect(struct usb_interface* intf)
-{
-    printk("The leap device has been disconnected\n");
+  struct urb          *urb;
+  u8                  *urb_buf;
+  dma_addr_t           urb_dma;
+  u8                   ep_addr;
+  int                  ep_interval;
+ 
+  spinlock_t           fifo_lock;
+  struct leap_frame    fifo[LEAP_FIFO_FRAMES];
+  unsigned int         fifo_head;
+  unsigned int         fifo_tail;
+  unsigned int         fifo_count;
+ 
+  wait_queue_head_t    wait;
+ 
+  struct cdev          cdev;
+  int                  minor;
+ 
+  struct mutex         io_mutex;
+  bool                 disconnected;
+ 
+  int                  open_count;
+ 
+  unsigned long        frames_received;
+  unsigned long        frames_dropped;
+  unsigned long        urb_errors;
+};
+
+
+static int leap_probe(struct usb_interface *intf, const struct usb_device_id *id) {
+    struct usb_device *udev = interface_to_usbdev(intf);
+    usb_set_intfdata(intf, your_private_data);
+    return 0;
 }
 
-static int leap_probe(struct usb_interface* usb_intf, const struct usb_device_id* usb_dID)
-{
-    printk("Probing leap device");
 
-    struct usb_device* usb_parent = interface_to_usbdev(usb_intf);
-    struct usb_interface* current_intf;
+static void leap_disconnect(struct usb_interface *intf) {
+    struct leap_dev *ldev = usb_get_intfdata(intf);
+    usb_kill_urb(dev->urb);
+    usb_free_urb(dev->urb);
+}
 
     for (int i = 0; i < usb_parent->config->desc.bNumInterfaces; i++)
     {
 	current_intf = usb_parent->config->interface[i];
 
-	if (current_intf && current_intf->dev.driver)
-	{
-	    struct usb_driver* old_driver = to_usb_driver(current_intf->dev.driver);
+static struct usb_device_id leap_table[] = {
+    { USB_DEVICE(LEAP_VENDOR_ID, LEAP_PRODUCT_ID) }, // Leap Motion Vendor/Product ID
+    {}
+};
 
-	    if (old_driver && old_driver != &leap_usb_driver)
-	    {
-	        printk("Previous driver unbinded\n");
-	        usb_driver_release_interface(old_driver, current_intf);
-	    }
-        }
-    }
+MODULE_DEVICE_TABLE(usb,leap_table);
 
-    return 0;
-}
-
-static struct usb_driver leap_usb_driver = 
-{
-    .name = "leap",
-    .id_table = usb_table,
+static struct usb_driver leap_driver = {
+    .name = "leap_motion",
+    .probe = leap_probe,
     .disconnect = leap_disconnect,
     .probe = leap_probe,
 };
