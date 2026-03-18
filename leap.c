@@ -1,7 +1,16 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/slab.h>
+#include <linux/errno.h>
+#include <linux/mutex.h>
+#include <linux/spinlock.h>
+#include <linux/kfifo.h>
+#include <linux/poll.h>
+#include <linux/uaccess.h>
 #include <linux/usb.h>
-#include <linux/hid.h>
+#include <linux/cdev.h>
+#include <linux/device.h>
 
 static int leap_probe(struct usb_interface *interface, const struct usb_device_id *id);
 static void leap_disconnect(struct usb_interface *interface);
