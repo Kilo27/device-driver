@@ -1,13 +1,12 @@
-BUILD_DIR := $(PWD)/build
-SRC_DIR := $(PWD)
-
-obj-m := leap.o
-
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(BUILD_DIR) $@
+obj-m += leap.o
 
 all:
-	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(BUILD_DIR) modules
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
 clean:
-	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(BUILD_DIR) clean
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+install:
+	sudo cp leap.ko /lin/modules/$(shell uname -r)/kernel/drivers/usb/
+	sudo depmod -a
+	sudo modprobe leap

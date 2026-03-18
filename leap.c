@@ -18,8 +18,7 @@
 
 #define LEAP_FIFO_FRAMES   8
 
-static int leap_probe(struct usb_interface *interface, const struct usb_device_id *id);
-static void leap_disconnect(struct usb_interface *interface);
+static struct usb_driver leap_usb_driver;
 
 struct leap_dev {
   //Found this online, seems to be standard for linux usb devices using the interface_to_usbdev function - KJ
@@ -67,6 +66,9 @@ static void leap_disconnect(struct usb_interface *intf) {
     usb_free_urb(dev->urb);
 }
 
+    for (int i = 0; i < usb_parent->config->desc.bNumInterfaces; i++)
+    {
+	current_intf = usb_parent->config->interface[i];
 
 static struct usb_device_id leap_table[] = {
     { USB_DEVICE(LEAP_VENDOR_ID, LEAP_PRODUCT_ID) }, // Leap Motion Vendor/Product ID
@@ -79,15 +81,43 @@ static struct usb_driver leap_driver = {
     .name = "leap_motion",
     .probe = leap_probe,
     .disconnect = leap_disconnect,
-    .id_table = leap_table,
+    .probe = leap_probe,
 };
 
-static int __init leap_init(void) {
-    return usb_register(&leap_driver);
+static ssize_t my_read(struct file *f, char __user *u , size_t l, loff_t *o){
+    printk("Read is called\n");
+    return 0;
+}
+
+static struct file_operations fops = {
+    .read = my_read
+};
+
+static int __init leap_init(void) 
+{
+    int ret = usb_register(&leap_usb_driver);
+    major = register_chrdev(0,"leap", &fops);
+
+    if (ret)
+    {
+	printk("Error in registering leap motion device : usb\n");
+	return ret;
+    }
+
+    if (major<0){
+        printk("Error in registering leap motion device : file\n");
+        return major;
+    }
+
+    printk("The device has been registered. The Major Device Number is %d\n", major);
+    return 0;
 }
 
 static void __exit leap_exit(void) {
-    usb_deregister(&leap_driver);
+    usb_deregister(&leap_usb_driver);
+    unregister_chrdev(major, "leap");
+    printk("The leap device has been deregistered\n");
+    
 }
 
 
@@ -95,5 +125,5 @@ module_init(leap_init);
 module_exit(leap_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Authors");
+MODULE_AUTHOR("Team-12");
 MODULE_DESCRIPTION("Leap Motion Driver");
