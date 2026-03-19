@@ -75,9 +75,24 @@ struct leap_dev {
 };
 
 
-static int leap_probe(struct usb_interface *intf, const struct usb_device_id *id) {
-    struct usb_device *udev = interface_to_usbdev(intf);
+static int leap_probe(struct usb_interface *intf, const struct usb_device_id *id) 
+{
+    struct usb_device* udev = interface_to_usbdev(intf);
+    struct leap_device* dev;
+
+    dev = kzalloc(sizeof(*dev)m GFP_KERNEL);
+
+    if (!dev)
+    {
+	printk("Failure to probe Leap device");
+	return -ENOMEM;
+    }
+
+    dev->udev = usb_get_dev(udev);
+    usb_set_intfdata(intf, dev);
+
     usb_set_intfdata(intf, your_private_data);
+    printk("Leap device probed");
     return 0;
 }
 
