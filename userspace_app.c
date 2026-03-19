@@ -5,6 +5,18 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <time.h>
+#include <LeapC.h>
+
+#define CMD_DEVICE "/dev/leapcmd"
+#define LEAP_GESTURE_SWIPE_LEFT 0 
+#define LEAP_GESTURE_SWIPE_RIGHT 1
+#define LEAP_GESTURE_SWIPE_UP 2
+#define LEAP_GESTURE_SWIPE_DOWN 3
+#define LEAP_GESTURE_PINCH 4
+#define LEAP_GESTURE_GRAB 5
+#define LEAP_GESTURE_OPEN 6
+#define LEAP_GESTURE_CIRCLE 7
 
 struct leap_event{
     int time;
