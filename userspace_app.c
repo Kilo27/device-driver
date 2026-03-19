@@ -6,6 +6,17 @@
 #include <pthread.h>
 #include <stdint.h>
 
+struct leap_event{
+    int time;
+    int gesture;
+    int hand;
+    int x;
+    int y;
+
+};
+
+static const char *gesture_commands[] = {"lsusb","lspci","lsblk", "df -h", "free -h", "uptime", "uname -a", "ip link show"};
+
 int main(void){
 
     pthread_t reader_tid;
@@ -26,6 +37,8 @@ int main(void){
 
     pthread_join(reader_tid, NULL);
     pthread_join(dispatcher_tid, NULL);
+
+    close(cmd_fd);
     return 0;
 
 
