@@ -50,13 +50,35 @@ static struct usb_driver leap_usb_driver =
     .probe = leap_probe,
 };
 
-static ssize_t my_read(struct file *f, char __user *u , size_t l, loff_t *o){
+static int leap_open(struct inode* inode, struct file* f)
+{
+    printk("Open is called\n");
+    return 0;
+}
+
+static int leap_release(struct inode* inode, struct file* f)
+{
+    printk("Release is called\n");
+    return 0;
+}
+
+static ssize_t leap_read(struct file *f, char __user *u , size_t l, loff_t *o){
     printk("Read is called\n");
     return 0;
 }
 
+static ssize_t leap_write(struct file* f, const char __user* buff, size_t count, loff_t* ppos)
+{
+    printk("Write is called\n");
+    return 0;
+}
+
 static struct file_operations fops = {
-    .read = my_read
+    .owner = THIS_MODULE,
+    .open = leap_open,
+    .read = leap_read,
+    .write = leap_write,
+    .release = leap_release,
 };
 
 static int __init leap_init(void) 
