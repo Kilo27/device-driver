@@ -144,27 +144,27 @@ static void *reader_thread(void *arg);
         return NULL;
 }
 
+static void *dispatcher_thread(void *arg)
+{
+    struct leap_event_evt;
+    const char *gesture_names[] = {
+        "Swipe Left", "Swipe Right", "Swipe Up", "Swipe Down", "Pinch", "Grab", "Open Hand", "Circle"
+    };
 
+    printf("[dispatcher] Waiting for Leap Motion gestures...\n")
+    
+    while(1) {
+        if (read(cmd_fd, &evt, sizeof(evt)) != sizeof(evt))
+            continue;
 
-
-
-
-            }
+        if (evt.gesture < NUM_GESTURES) {
+            printf("\n[%s | %s hand | palm (%d,%d)] Running: %s\n", gesture_names[evt.gesture],evt.hand ? "right" : "left", evt.x, evt.y, gesture_commands[evt.gesture]);
+            fflush(stdout);
+            system(gesture_commands[evt.gesture]);
         }
-
-
+        fflush(stdout);
     }
-
-
-
-
-
-
-
-
-
-
-
+    return NULL;
 }
 
 int main(void){
