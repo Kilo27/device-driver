@@ -123,7 +123,7 @@ static const struct file_operations fops = {
         pr_err(DRIVER_NAME ": cdev_add failed: %d\n", ret);
         goto err_cdev;
     }
-    leapcmd_class = class_create(THIS_MODULE, CLASS_NAME);
+    leapcmd_class = class_create(CLASS_NAME);
     if (IS_ERR(leapcmd_class)) {
         ret = PTR_ERR(leapcmd_class);
         pr_err(DRIVER_NAME ": class_create failed: %d\n", ret);
