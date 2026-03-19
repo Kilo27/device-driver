@@ -88,6 +88,83 @@ static void *reader_thread(void *arg);
             break;
         }
     }
+    
+    LEAP_HAND prev_hands[2] = {0};
+    int prev_valid[2] = {0};
+    int last_gesture[2] = {-1,-1};
+    int last_time[2] = {0,0};
+
+    while(1){
+        LEAP_CONNECTION_MESSAGE msg;
+        if(LeapPollConnection(conn,100,&msg) != eLeapRS_Success){
+            continue;
+        }
+        if(msg.type != eLeapEventType_Tracking){
+            continue;
+
+        }
+
+        const LEAP_TRACKING_EVENT *frame = msg.tracking_event;
+
+        for(int i=0; i< frame->nHands; i++){
+            LEAP_HAND *h = &frame -> pHands[i];
+            int side = (h -> type == eLeapHandTypw_Right) ? 1:0;
+            LEAP_HAND *prev = prev_valid[side] ? &prev_hands[side] : NULL;
+
+            int g = classify_gesture(h,prev);
+
+            int now = now_ms();
+
+            if( g== last_gesture[side] && (now - last_time[side]) < 500){
+                goto next;
+            }
+
+            if( g>= 0){
+                struct leap_event evt = {
+                    .time = now,
+                    .gesture = (int)g,
+                    .hand = (int) side,
+                    .x = (int)h -> palm.position.x;
+                    .y = (int) h -> palm.position.y,
+                };
+
+                write(cmd_fd, &evt, sizeof(evt));
+                last_gesture[side] =int g;
+                last_time[side] = now;
+            }
+
+        next:
+            prev_hands[side] = *h;
+            prev_valid[side] = 1;
+        }
+    }
+
+        LeapCloseConnection(conn);
+        LeapDestroyConnection(conn);
+        return NULL;
+}
+
+
+
+
+
+
+            }
+        }
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
 }
 
 int main(void){
