@@ -20,6 +20,9 @@ install: all
 	sudo cp $(BUILDDIR)/leap.ko /lib/modules/$(shell uname -r)/kernel/drivers/usb/
 	sudo depmod -a
 	sudo modprobe leap
+	@if ! -d "build/"; then\
+  	mkdir build/;\
+  fi
 	echo "Leap Driver Installed, reboot now for changes to take effect"
  
 uninstall:
