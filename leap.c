@@ -118,15 +118,42 @@ static int leap_release(struct inode* inode, struct file* f)
     return 0;
 }
 
-static ssize_t leap_read(struct file *f, char __user *u , size_t l, loff_t *o){
+static ssize_t leap_read(struct file *f, char __user *buff , size_t l, loff_t *o)
+{
     printk("Read is called\n");
-    return 0;
+
+    struct leap_event evt;
+
+    wait_event_interruptible(read_wq, !kfifo_is_empty(&event_fifo));
+
+    if (kfifo_out(&event_fifo, &evt, 1) == 0)
+	return -EAGAIN;
+
+    if (copy_to_user(buff, &evt, sizeof(evt)))
+	return -EFAULT;
+
+    wake_up_interruptible(&write_wq);
+
+    return sizeof(evt);
 }
 
 static ssize_t leap_write(struct file* f, const char __user* buff, size_t count, loff_t* ppos)
 {
     printk("Write is called\n");
-    return 0;
+
+    struct leap_event evt;
+
+    if (copy_from_user(&evt, buff, sizeof(evt)))
+	return -EFAULT;
+
+    wait_event_interruptible(write_ew, !kfifo_is_full(&event_fifo));
+
+    if (kfifo_in(&event_fifo, &evt, 1) == 0)
+	return -ENOSPC;
+
+    wake_up_interruptible(&read_wq);
+
+    return sizeof(evt);
 }
 
 static struct file_operations fops = {
