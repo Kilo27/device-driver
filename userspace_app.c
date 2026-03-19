@@ -5,6 +5,18 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <time.h>
+#include <LeapC.h>
+
+#define CMD_DEVICE "/dev/leapcmd"
+#define LEAP_GESTURE_SWIPE_LEFT 0 
+#define LEAP_GESTURE_SWIPE_RIGHT 1
+#define LEAP_GESTURE_SWIPE_UP 2
+#define LEAP_GESTURE_SWIPE_DOWN 3
+#define LEAP_GESTURE_PINCH 4
+#define LEAP_GESTURE_GRAB 5
+#define LEAP_GESTURE_OPEN 6
+#define LEAP_GESTURE_CIRCLE 7
 
 struct leap_event{
     int time;
@@ -57,10 +69,114 @@ static int classify_gesture(LEAP_HAND *hand, LEAP_HAND *prev){
             return LEAP_GESTURE_SWIPE_DOWN;
         }
 
-        return -1;
+        
 
     }
 
+    return -1;
+
+}
+
+
+static void *reader_thread(void *arg);
+{
+    LEAP_CONNECTION conn;
+    LEAP_CONNECTION_CONFIG cfg = {0};
+    cfg.size() = sizeof(cfg);
+
+    if (LeapCreateConnection(&cfg,&conn) != eLeapRS_Success) {
+        fprintf(stderr, "[reader] LeapCreateConnection failed\n");
+        return NULL;
+    }
+    LeapOpenConnection(conn);
+    printf("[reader] LeapC Connection opened, waiting for device...\n");
+
+    while(1){
+        LEAP_CONNECTION_MESSAGE msg;
+        if (LeapPollConnection(conn, 1000, &msg) != eLeapRS_Success)
+            continue;
+        if (msg.type == eLeapEventType_Device){
+            printf("[reader] Device ready\n");
+            break;
+        }
+    }
+    
+    LEAP_HAND prev_hands[2] = {0};
+    int prev_valid[2] = {0};
+    int last_gesture[2] = {-1,-1};
+    int last_time[2] = {0,0};
+
+    while(1){
+        LEAP_CONNECTION_MESSAGE msg;
+        if(LeapPollConnection(conn,100,&msg) != eLeapRS_Success){
+            continue;
+        }
+        if(msg.type != eLeapEventType_Tracking){
+            continue;
+
+        }
+
+        const LEAP_TRACKING_EVENT *frame = msg.tracking_event;
+
+        for(int i=0; i< frame->nHands; i++){
+            LEAP_HAND *h = &frame -> pHands[i];
+            int side = (h -> type == eLeapHandTypw_Right) ? 1:0;
+            LEAP_HAND *prev = prev_valid[side] ? &prev_hands[side] : NULL;
+
+            int g = classify_gesture(h,prev);
+
+            int now = now_ms();
+
+            if( g== last_gesture[side] && (now - last_time[side]) < 500){
+                goto next;
+            }
+
+            if( g>= 0){
+                struct leap_event evt = {
+                    .time = now,
+                    .gesture = (int)g,
+                    .hand = (int) side,
+                    .x = (int)h -> palm.position.x;
+                    .y = (int) h -> palm.position.y,
+                };
+
+                write(cmd_fd, &evt, sizeof(evt));
+                last_gesture[side] =int g;
+                last_time[side] = now;
+            }
+
+        next:
+            prev_hands[side] = *h;
+            prev_valid[side] = 1;
+        }
+    }
+
+        LeapCloseConnection(conn);
+        LeapDestroyConnection(conn);
+        return NULL;
+}
+
+static void *dispatcher_thread(void *arg)
+{
+    struct leap_event_evt;
+    const char *gesture_names[] = {
+        "Swipe Left", "Swipe Right", "Swipe Up", "Swipe Down", "Pinch", "Grab", "Open Hand", "Circle"
+    };
+
+    printf("[dispatcher] Waiting for Leap Motion gestures...\n")
+    
+    while(1) {
+        if (read(cmd_fd, &evt, sizeof(evt)) != sizeof(evt))
+            continue;
+
+        if (evt.gesture < NUM_GESTURES) {
+            printf("\n[%s | %s hand | palm (%d,%d)] Running: %s\n", gesture_names[evt.gesture],evt.hand ? "right" : "left", evt.x, evt.y, gesture_commands[evt.gesture]);
+            fflush(stdout);
+            system(gesture_commands[evt.gesture]);
+        }
+        fflush(stdout);
+    }
+    return NULL;
 }
 
 int main(void){
