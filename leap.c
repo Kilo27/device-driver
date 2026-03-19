@@ -40,40 +40,13 @@ struct leap_event {
     short         y;         // palm y, mm 
 };
 
-static struct usb_driver leap_usb_driver;
+static int major_num;
+static struct cdev;
+static struct class *leapcmd_class;
 
-struct leap_dev {
-  //Found this online, seems to be standard for linux usb devices using the interface_to_usbdev function - KJ
-  struct usb_device   *udev;
-  struct usb_interface *intf;
-
-  struct urb          *urb;
-  u8                  *urb_buf;
-  dma_addr_t           urb_dma;
-  u8                   ep_addr;
-  int                  ep_interval;
- 
-  spinlock_t           fifo_lock;
-  struct leap_frame    fifo[LEAP_FIFO_FRAMES];
-  unsigned int         fifo_head;
-  unsigned int         fifo_tail;
-  unsigned int         fifo_count;
- 
-  wait_queue_head_t    wait;
- 
-  struct cdev          cdev;
-  int                  minor;
- 
-  struct mutex         io_mutex;
-  bool                 disconnected;
- 
-  int                  open_count;
- 
-  unsigned long        frames_received;
-  unsigned long        frames_dropped;
-  unsigned long        urb_errors;
-};
-
+static DECLARE_KFIFO(event_fifo, struct leapevent, 64);
+static DECLARE_AIT_QUEUE_HEAD(read_wq);
+static DECLARE_WAIT_QUEUE_HEAD(write_wq);
 
 static int leap_probe(struct usb_interface *intf, const struct usb_device_id *id) 
 {
@@ -121,19 +94,19 @@ static struct usb_driver leap_driver = {
     .probe = leap_probe,
 };
 
-static int leap_open(struct inode* inode, struct file* f)
+static int leapcmd_open(struct inode* inode, struct file* f)
 {
     printk("Open is called\n");
     return 0;
 }
 
-static int leap_release(struct inode* inode, struct file* f)
+static int leapcmd_release(struct inode* inode, struct file* f)
 {
     printk("Release is called\n");
     return 0;
 }
 
-static ssize_t leap_read(struct file *f, char __user *buff , size_t l, loff_t *o)
+static ssize_t leapcmd_read(struct file *f, char __user *buff , size_t l, loff_t *o)
 {
     printk("Read is called\n");
 
@@ -152,7 +125,7 @@ static ssize_t leap_read(struct file *f, char __user *buff , size_t l, loff_t *o
     return sizeof(evt);
 }
 
-static ssize_t leap_write(struct file* f, const char __user* buff, size_t count, loff_t* ppos)
+static ssize_t leapcmd_write(struct file* f, const char __user* buff, size_t count, loff_t* ppos)
 {
     printk("Write is called\n");
 
@@ -173,13 +146,13 @@ static ssize_t leap_write(struct file* f, const char __user* buff, size_t count,
 
 static struct file_operations fops = {
     .owner = THIS_MODULE,
-    .open = leap_open,
-    .read = leap_read,
-    .write = leap_write,
-    .release = leap_release,
+    .open = leapcmd_open,
+    .read = leapcmd_read,
+    .write = leapcmd_write,
+    .release = leapcmd_release,
 };
 
-static int __init leap_init(void) 
+static int __init leapcmd_init(void) 
 {
     int ret = usb_register(&leap_usb_driver);
     major = register_chrdev(0,"leap", &fops);
@@ -199,11 +172,13 @@ static int __init leap_init(void)
     return 0;
 }
 
-static void __exit leap_exit(void) {
-    usb_deregister(&leap_usb_driver);
-    unregister_chrdev(major, "leap");
-    printk("The leap device has been deregistered\n");
-    
+static void __exit leapcmd_exit(void) {
+    dev_t dev = MKDEV(major_num, 0);
+    device_destroy(leapcmd_class, dev);
+    class_destroy(leapcmd_class);
+    cdev_del(&leapcmd_cdev);
+    unregister_chrdev_region(dev, 1);
+    pr_info("leapcmd: unloaded\n");
 }
 
 
