@@ -18,6 +18,28 @@
 
 #define LEAP_FIFO_FRAMES   8
 
+#define DEVICE_NAME "leapcmd"
+#define CLASS_NAME  "leapcmd_class"
+
+/* Gesture types */
+#define LEAP_GESTURE_SWIPE_LEFT  0
+#define LEAP_GESTURE_SWIPE_RIGHT 1
+#define LEAP_GESTURE_SWIPE_UP    2
+#define LEAP_GESTURE_SWIPE_DOWN  3
+#define LEAP_GESTURE_PINCH       4
+#define LEAP_GESTURE_GRAB        5
+#define LEAP_GESTURE_OPEN        6
+#define LEAP_GESTURE_CIRCLE      7
+
+
+struct leap_event {
+    unsigned int  time;      // ms timestamp
+    unsigned char gesture;   // LEAP_GESTURE_*
+    unsigned char hand;      // 0 = left, 1 = right
+    short         x;         // palm x, mm
+    short         y;         // palm y, mm 
+};
+
 static struct usb_driver leap_usb_driver;
 
 struct leap_dev {
