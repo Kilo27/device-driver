@@ -18,6 +18,28 @@
 
 #define LEAP_FIFO_FRAMES   8
 
+#define DEVICE_NAME "leapcmd"
+#define CLASS_NAME  "leapcmd_class"
+
+/* Gesture types */
+#define LEAP_GESTURE_SWIPE_LEFT  0
+#define LEAP_GESTURE_SWIPE_RIGHT 1
+#define LEAP_GESTURE_SWIPE_UP    2
+#define LEAP_GESTURE_SWIPE_DOWN  3
+#define LEAP_GESTURE_PINCH       4
+#define LEAP_GESTURE_GRAB        5
+#define LEAP_GESTURE_OPEN        6
+#define LEAP_GESTURE_CIRCLE      7
+
+
+struct leap_event {
+    unsigned int  time;      // ms timestamp
+    unsigned char gesture;   // LEAP_GESTURE_*
+    unsigned char hand;      // 0 = left, 1 = right
+    short         x;         // palm x, mm
+    short         y;         // palm y, mm 
+};
+
 static struct usb_driver leap_usb_driver;
 
 struct leap_dev {
@@ -96,15 +118,42 @@ static int leap_release(struct inode* inode, struct file* f)
     return 0;
 }
 
-static ssize_t leap_read(struct file *f, char __user *u , size_t l, loff_t *o){
+static ssize_t leap_read(struct file *f, char __user *buff , size_t l, loff_t *o)
+{
     printk("Read is called\n");
-    return 0;
+
+    struct leap_event evt;
+
+    wait_event_interruptible(read_wq, !kfifo_is_empty(&event_fifo));
+
+    if (kfifo_out(&event_fifo, &evt, 1) == 0)
+	return -EAGAIN;
+
+    if (copy_to_user(buff, &evt, sizeof(evt)))
+	return -EFAULT;
+
+    wake_up_interruptible(&write_wq);
+
+    return sizeof(evt);
 }
 
 static ssize_t leap_write(struct file* f, const char __user* buff, size_t count, loff_t* ppos)
 {
     printk("Write is called\n");
-    return 0;
+
+    struct leap_event evt;
+
+    if (copy_from_user(&evt, buff, sizeof(evt)))
+	return -EFAULT;
+
+    wait_event_interruptible(write_ew, !kfifo_is_full(&event_fifo));
+
+    if (kfifo_in(&event_fifo, &evt, 1) == 0)
+	return -ENOSPC;
+
+    wake_up_interruptible(&read_wq);
+
+    return sizeof(evt);
 }
 
 static struct file_operations fops = {
