@@ -1,0 +1,16 @@
+build/
+leap.ko
+leap.mod
+leap.mod.c 
+leap.mod.o 
+leap.o 
+Module.symvers
+modules.order
+..module-common.o.cmd
+.leap.ko.cmd 
+.leap.mod.cmd 
+.leap.mod.o.cmd 
+.leap.o.cmd 
+.Module.symvers.cmd
+.module-common.o 
+.modules.order.cmd
