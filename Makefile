@@ -6,6 +6,7 @@ BUILDDIR := $(PWD)/build
  
 all: $(BUILDDIR)
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
+	mkdir build/
 	gcc -Wall -pthread -o $(BUILDDIR)/userspace_app userspace_app.c -lLeapC
 	cp leap.ko $(BUILDDIR)/
  
