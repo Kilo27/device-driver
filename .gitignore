@@ -1,4 +1,4 @@
-build/
+build/*
 leap.ko
 leap.mod
 leap.mod.c 
