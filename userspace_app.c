@@ -57,10 +57,37 @@ static int classify_gesture(LEAP_HAND *hand, LEAP_HAND *prev){
             return LEAP_GESTURE_SWIPE_DOWN;
         }
 
-        return -1;
+        
 
     }
 
+    return -1;
+
+}
+
+
+static void *reader_thread(void *arg);
+{
+    LEAP_CONNECTION conn;
+    LEAP_CONNECTION_CONFIG cfg = {0};
+    cfg.size() = sizeof(cfg);
+
+    if (LeapCreateConnection(&cfg,&conn) != eLeapRS_Success) {
+        fprintf(stderr, "[reader] LeapCreateConnection failed\n");
+        return NULL;
+    }
+    LeapOpenConnection(conn);
+    printf("[reader] LeapC Connection opened, waiting for device...\n");
+
+    while(1){
+        LEAP_CONNECTION_MESSAGE msg;
+        if (LeapPollConnection(conn, 1000, &msg) != eLeapRS_Success)
+            continue;
+        if (msg.type == eLeapEventType_Device){
+            printf("[reader] Device ready\n");
+            break;
+        }
+    }
 }
 
 int main(void){
