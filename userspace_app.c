@@ -25,19 +25,19 @@ struct leap_event {
     uint8_t  gesture;
     uint8_t  hand;   
     int16_t  x;
-    int16_t  y;
+    int16_t  y; // EVERYONE THIS IS THE Y COORDINATE WE NEED TO ADJUST VOLUME THE WAY WE WANTED
 };
 
 
 static const char *gesture_commands[] = {
-    "lsusb",        
-    "lspci",        
-    "lsblk",        
-    "df -h",        
-    "free -h",      
-    "uptime",       
-    "uname -a",     
-    "ip link show", 
+    "amixer -q sset Master 3%+",
+    "amixer -q sset Master 3%-",
+    "amixer -q sset Master toggle",
+    "df -h",
+    "free -h",
+    "uptime",
+    "uname -a",
+    "ip link show",
 };
 #define NUM_GESTURES 8
 
